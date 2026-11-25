@@ -1,0 +1,3 @@
+[workspace]
+members = ["crates/gd_rust_core", "crates/gdrust_cli"]
+resolver = "2"
