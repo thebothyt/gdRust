@@ -1,8 +1,7 @@
 {
-  "outputDirectory": "web",
-  "buildCommand": null,
-  "installCommand": null,
   "framework": null,
+  "buildCommand": "mkdir -p public && cp -r web/. public/",
+  "outputDirectory": "public",
   "headers": [
     { "source": "/(.*)\\.wasm", "headers": [{ "key": "Content-Type", "value": "application/wasm" }] }
   ]
