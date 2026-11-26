@@ -14,9 +14,9 @@ pub struct GridPos(pub f32, pub f32);
 
 #[derive(Clone, Copy, Debug)]
 pub enum Easing {
-    None, EaseInOut, EaseIn, EaseOut, ElasticInOut, ElasticIn, ElasticOut,
+    None = 0, EaseInOut, EaseIn, EaseOut, ElasticInOut, ElasticIn, ElasticOut,
     BounceInOut, BounceIn, BounceOut, ExpoInOut, ExpoIn, ExpoOut,
-    SineInOut, SineIn, SineOut,
+    SineInOut, SineIn, SineOut, BackInOut, BackIn, BackOut,
 }
 
 #[derive(Clone, Copy, Debug)]
@@ -28,13 +28,15 @@ pub enum Flag { NoTouch, DontFade, DontEnter, HighDetail, NoEffects, NoGlow }
 #[derive(Clone, Debug)]
 pub struct Obj {
     pub(crate) props: BTreeMap<u16, String>,
+    // some objects (start pos) carry string keys like kA2, so those ride along here
+    pub(crate) tail: String,
 }
 
 impl Obj {
     pub fn raw(id: u16) -> Self {
         let mut props = BTreeMap::new();
         props.insert(1, id.to_string());
-        Obj { props }
+        Obj { props, tail: String::new() }
     }
 
     pub fn set(mut self, key: u16, val: impl ToString) -> Self {
@@ -42,9 +44,9 @@ impl Obj {
         self
     }
 
-    pub fn set_bool(self, key: u16, v: bool) -> Self {
-        if v { self.set(key, 1) } else { self.set(key, 0) }
-    }
+    pub fn set_bool(self, key: u16, v: bool) -> Self { self.set(key, v as u8) }
+
+    pub fn set_tail(mut self, tail: &str) -> Self { self.tail = tail.to_string(); self }
 
     // cell (0,0) center sits at 15,15 internally, so +15 keeps blocks grid-aligned
     pub fn at(self, x: f32, y: f32) -> Self {
@@ -52,26 +54,26 @@ impl Obj {
     }
     pub fn at_pos(self, p: GridPos) -> Self { self.at(p.0, p.1) }
 
-    pub fn spawn_triggered(self, multi: bool) -> Self {
-        self.set(62, 1).set_bool(87, multi)
-    }
+    pub fn spawn_triggered(self, multi: bool) -> Self { self.set(62, 1).set_bool(87, multi) }
     pub fn multi_triggered(self, v: bool) -> Self { self.set_bool(87, v) }
     pub fn touch_triggered(self, v: bool) -> Self { self.set_bool(11, v) }
 
+    // groups are one dotted string, so this has to append instead of overwrite
     pub fn add_groups(mut self, groups: &[Group]) -> Self {
         let mut ids: Vec<String> = self.props.get(&57).map(|s| s.split('.').map(String::from).collect()).unwrap_or_default();
         ids.extend(groups.iter().map(|g| g.0.to_string()));
         self.props.insert(57, ids.join("."));
         self
     }
-    pub fn set_parent(self, g: Group) -> Self { self.set(34, 1).add_groups(&[g]) }
+    pub fn set_parent(self, g: Group) -> Self { self.set(274, g.0).add_groups(&[g]) }
 
     pub fn with_color(self, c: Color) -> Self { self.set(21, c.0) }
     pub fn with_detail_color(self, c: Color) -> Self { self.set(22, c.0) }
     pub fn with_z(self, layer: ZLayer, order: i32) -> Self { self.set(24, layer as i32).set(25, order) }
     pub fn with_transform(self, sx: f32, sy: f32, rot: f32) -> Self {
-        self.set(32, sx).set(128, sx).set(129, sy).set(6, rot)
+        self.set(128, sx).set(129, sy).set(6, rot)
     }
+    pub fn with_warp(self, wx: f32, wy: f32) -> Self { self.set(131, wx).set(132, wy) }
     pub fn with_hsv(self, h: i32, s: f32, b: f32, s_chk: bool, b_chk: bool) -> Self {
         self.set(41, 1).set(43, format!("{h}a{s}a{b}a{}a{}", s_chk as u8, b_chk as u8))
     }
@@ -88,6 +90,8 @@ impl Obj {
     }
 
     pub(crate) fn serialize(&self) -> String {
-        self.props.iter().map(|(k, v)| format!("{k},{v}")).collect::<Vec<_>>().join(",")
+        let mut s = self.props.iter().map(|(k, v)| format!("{k},{v}")).collect::<Vec<_>>().join(",");
+        if !self.tail.is_empty() { s.push(','); s.push_str(&self.tail); }
+        s
     }
 }

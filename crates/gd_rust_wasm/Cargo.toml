@@ -1,0 +1,12 @@
+[package]
+name = "gd_rust_wasm"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+doctest = false
+
+[dependencies]
+gd_rust_core = { path = "../gd_rust_core", default-features = false }
+rhai = { version = "1", default-features = false, features = ["no_time"] }

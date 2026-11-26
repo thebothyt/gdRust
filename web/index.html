@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>gdRust playground</title>
+<style>
+  :root {
+    --bg: #0f1115; --panel: #171a21; --line: #272c37; --text: #e6e8ee; --dim: #8b92a3;
+    --accent: #5eead4; --err: #ff7a7a; --ok: #7ee787;
+    color-scheme: dark;
+  }
+  @media (prefers-color-scheme: light) {
+    :root { --bg: #f5f6f8; --panel: #fff; --line: #dcdfe6; --text: #1b1f27; --dim: #667085; --accent: #0f766e; --err: #c0262d; --ok: #1a7f37; color-scheme: light; }
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { background: var(--bg); color: var(--text); font: 14px/1.5 system-ui, sans-serif; display: flex; flex-direction: column; }
+  header { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 650; letter-spacing: .2px; }
+  header h1 span { color: var(--accent); }
+  .grow { flex: 1; }
+  button { font: inherit; cursor: pointer; border: 1px solid var(--line); background: var(--panel); color: var(--text); padding: 6px 14px; border-radius: 6px; }
+  button:hover { border-color: var(--accent); }
+  button.primary { background: var(--accent); color: #06201c; border-color: var(--accent); font-weight: 600; }
+  button:disabled { opacity: .45; cursor: default; }
+  main { flex: 1; display: grid; grid-template-columns: 1fr 340px; min-height: 0; }
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; grid-template-rows: 1fr 220px; } }
+  #code { width: 100%; height: 100%; resize: none; border: 0; outline: 0; padding: 16px; background: var(--bg); color: var(--text);
+          font: 13px/1.6 ui-monospace, "SF Mono", Menlo, Consolas, monospace; tab-size: 2; }
+  aside { border-left: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-height: 0; }
+  @media (max-width: 800px) { aside { border-left: 0; border-top: 1px solid var(--line); } }
+  aside h2 { margin: 0; padding: 10px 14px; font-size: 12px; text-transform: uppercase; letter-spacing: .8px; color: var(--dim); border-bottom: 1px solid var(--line); }
+  #out { flex: 1; margin: 0; padding: 12px 14px; overflow: auto; white-space: pre-wrap; word-break: break-word;
+         font: 12.5px/1.55 ui-monospace, Menlo, Consolas, monospace; }
+  .err { color: var(--err); } .ok { color: var(--ok); } .dim { color: var(--dim); }
+  footer { padding: 6px 16px; border-top: 1px solid var(--line); color: var(--dim); font-size: 12px; }
+</style>
+</head>
+<body>
+<header>
+  <h1><span>gd</span>Rust playground</h1>
+  <div class="grow"></div>
+  <button id="example">Load example</button>
+  <button id="build" class="primary" disabled>Build (Ctrl+Enter)</button>
+  <button id="download" disabled>Download .gmd</button>
+</header>
+<main>
+  <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea>
+  <aside>
+    <h2>Output</h2>
+    <pre id="out" class="dim">loading wasm...</pre>
+  </aside>
+</main>
+<footer>Playground scripts are rhai, close to the Rust API but not identical. Import the .gmd with GDShare or Geode's GMD mod.</footer>
+
+<script type="module">
+import { load } from "./gdrust.js";
+
+const $ = (id) => document.getElementById(id);
+const code = $("code"), out = $("out"), buildBtn = $("build"), dlBtn = $("download");
+const KEY = "gdrust:script";
+let gd = null, lastGmd = null, lastName = "level";
+
+const show = (cls, text) => { out.className = cls; out.textContent = text; };
+const read = (k) => { try { return localStorage.getItem(k); } catch { return null; } };
+const write = (k, v) => { try { localStorage.setItem(k, v); } catch {} };
+
+async function loadExample() {
+  const res = await fetch("./example.rhai");
+  code.value = await res.text();
+  write(KEY, code.value);
+}
+
+function build() {
+  if (!gd) return;
+  const r = gd.compile(code.value);
+  if (!r.ok) {
+    lastGmd = null; dlBtn.disabled = true;
+    show("err", r.text);
+    return;
+  }
+  lastGmd = r.text;
+  const m = /<k>k2<\/k><s>([^<]*)<\/s>/.exec(r.text);
+  lastName = (m ? m[1] : "level").replace(/[^\w\- ]+/g, "").trim() || "level";
+  dlBtn.disabled = false;
+  show("ok", `built ${r.objects} objects\n${(r.text.length / 1024).toFixed(1)} KB gmd` + (r.log ? `\n\n${r.log}` : ""));
+}
+
+function download() {
+  if (!lastGmd) return;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([lastGmd], { type: "application/xml" }));
+  a.download = lastName + ".gmd";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+code.addEventListener("input", () => write(KEY, code.value));
+code.addEventListener("keydown", (e) => {
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const s = code.selectionStart;
+    code.setRangeText("  ", s, code.selectionEnd, "end");
+    write(KEY, code.value);
+  } else if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
+    e.preventDefault();
+    build();
+  }
+});
+buildBtn.onclick = build;
+dlBtn.onclick = download;
+$("example").onclick = async () => { await loadExample(); build(); };
+
+(async () => {
+  const saved = read(KEY);
+  if (saved) code.value = saved; else await loadExample();
+  try {
+    gd = await load("./gdrust.wasm");
+    buildBtn.disabled = false;
+    show("dim", "ready. hit Build.");
+  } catch (e) {
+    show("err", "couldn't load gdrust.wasm\n" + e);
+  }
+})();
+</script>
+</body>
+</html>
