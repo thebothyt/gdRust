@@ -1,11 +1,9 @@
 {
   "outputDirectory": "web",
-  "buildCommand": "",
+  "buildCommand": null,
+  "installCommand": null,
   "framework": null,
   "headers": [
-    {
-      "source": "/(.*).wasm",
-      "headers": [{ "key": "Content-Type", "value": "application/wasm" }]
-    }
+    { "source": "/(.*)\\.wasm", "headers": [{ "key": "Content-Type", "value": "application/wasm" }] }
   ]
 }
