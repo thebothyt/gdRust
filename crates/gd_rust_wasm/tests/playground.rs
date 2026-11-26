@@ -1,6 +1,6 @@
 #[test]
 fn example_script_builds() {
-    let src = include_str!("../../../web/example.rhai");
+    let src = include_str!("../../../public/example.rhai");
     let out = gd_rust_wasm::compile(src).expect("example should compile");
     assert!(out.gmd.contains("<k>k4</k>"));
     assert_eq!(out.objects, 8);

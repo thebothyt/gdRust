@@ -36,7 +36,7 @@ Scripts are normal Rust, so rust-analyzer autocomplete just works. Prebuilt rele
 
 **Web playground**
 
-`web/` is a static site that runs the compiler as WASM, no server. Scripts there are
+`public/` is a static site that runs the compiler as WASM, no server. Scripts there are
 [rhai](https://rhai.rs), which looks like Rust but isn't identical. Same names, same argument order:
 
 ```rust
@@ -49,13 +49,13 @@ Differences from the Rust API: `let` instead of `let mut`, `add(...)` instead of
 settings through `set_mode(Mode::Ship)`, `set_speed(...)`, `set_name(...)`, ids are plain ints, and config
 structs are maps like `#{ length: 300, relative: true }`.
 
-Run it locally: `cd web && python3 -m http.server`, open `localhost:8000`.
+Run it locally: `cd public && python3 -m http.server`, open `localhost:8000`.
 
 **Deploy to Vercel**
 
-1. import the repo, leave Framework Preset on "Other". `vercel.json` already points the output at `web/`.
-2. no build command. `web/gdrust.wasm` is committed, Vercel's build image doesn't ship Rust.
-3. after changing the core or wasm crate: `./scripts/build-web.sh`, commit the new `gdrust.wasm`.
+1. import the repo, Framework Preset "Other". leave Root Directory empty and don't override the build command or output directory.
+2. there's no build step, Vercel serves `public/` as is. `public/gdrust.wasm` is committed, Vercel's build image doesn't ship Rust.
+3. after changing the core or wasm crate: `./scripts/build-web.sh`, commit the new `public/gdrust.wasm`.
 
 ## api
 
@@ -84,5 +84,5 @@ before you trust a specific id or key, and import test levels into a throwaway s
 crates/gd_rust_core   the library, no fs when built with --no-default-features (wasm safe)
 crates/gdrust_cli     gdrust build level.rs
 crates/gd_rust_wasm   rhai playground, plain C ABI, no wasm-bindgen
-web/                  playground site
+public/               playground site
 ```
