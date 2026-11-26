@@ -1,4 +1,6 @@
 {
+  "buildCommand": "echo static site",
+  "outputDirectory": "public",
   "headers": [
     { "source": "/(.*)\\.wasm", "headers": [{ "key": "Content-Type", "value": "application/wasm" }] }
   ]
